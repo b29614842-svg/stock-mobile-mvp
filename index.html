@@ -376,44 +376,55 @@
       }).join('');
     }
 
-    async function fetchData(){
-      listEl.innerHTML = '<div class="panel loading">載入中…</div>';
-      try{
-        const res = await fetch(API_URL);
-        const data = await res.json();
+   async function fetchData(){
+  listEl.innerHTML = '<div class="panel loading">載入中…</div>';
+  updatedAtEl.textContent = '讀取中…';
 
-        if (!data || !data.ok || !Array.isArray(data.rows)) {
-          throw new Error('API 回傳格式錯誤');
-        }
+  try{
+    const res = await fetch(API_URL, {
+      method: 'GET',
+      redirect: 'follow'
+    });
 
-        allRows = data.rows.map(r => ({
-  symbol: r.symbol,
-  name: r.name,
-  daytradescore: r.daytrade_score,
-  daytradelevel: String(r.daytrade_level || '').replace('級', ''),
-  overnightscore: r.overnight_score,
-  overnightlevel: String(r.overnight_level || '').replace('級', ''),
-  price: r.price,
-  changepct: r.change_pct,
-  volume: r.volume,
-  turnovervalue: r.turnover_value,
-  amplitudepct: r.amplitude_pct,
-  daytradeflag: r.daytrade_flag,
-  overnightflag: r.overnight_flag,
-  longtermflag: r.longterm_flag,
-  tags: r.tags,
-  memo: r.memo,
-  industry: r.industry,
-  updatedat: r.updated_at
-}));
-        updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
-        renderList();
-      }catch(err){
-        console.error(err);
-        listEl.innerHTML = '<div class="panel error">讀取失敗，請確認 Apps Script URL 與 CORS / JSON 輸出。</div>';
-        updatedAtEl.textContent = '資料讀取失敗';
-      }
+    const text = await res.text();
+    console.log('raw text:', text);
+
+    const data = JSON.parse(text);
+    console.log('parsed data:', data);
+
+    if (!data || !data.ok || !Array.isArray(data.rows)) {
+      throw new Error('API 回傳格式錯誤');
     }
+
+    allRows = data.rows.map(r => ({
+      symbol: r.symbol,
+      name: r.name,
+      daytradescore: r.daytrade_score,
+      daytradelevel: String(r.daytrade_level || '').replace('級', ''),
+      overnightscore: r.overnight_score,
+      overnightlevel: String(r.overnight_level || '').replace('級', ''),
+      price: r.price,
+      changepct: r.change_pct,
+      volume: r.volume,
+      turnovervalue: r.turnover_value,
+      amplitudepct: r.amplitude_pct,
+      daytradeflag: r.daytrade_flag,
+      overnightflag: r.overnight_flag,
+      longtermflag: r.longterm_flag,
+      tags: r.tags,
+      memo: r.memo,
+      industry: r.industry,
+      updatedat: r.updated_at
+    }));
+
+    updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
+    renderList();
+  }catch(err){
+    console.error('fetchData error:', err);
+    listEl.innerHTML = `<div class="panel error">讀取失敗：${err.message}</div>`;
+    updatedAtEl.textContent = '資料讀取失敗';
+  }
+}
 
     document.getElementById('refreshBtn').addEventListener('click', fetchData);
     searchInput.addEventListener('input', renderList);
