@@ -21,6 +21,14 @@
       --soft:#faf7f2;
       --shadow:0 10px 30px rgba(0,0,0,.06);
       --radius:18px;
+
+      --daytrade:#2563eb;
+      --overnight:#dc2626;
+      --both:#ca8a04;
+      --daytrade-soft:#dbeafe;
+      --overnight-soft:#fee2e2;
+      --both-soft:#fef3c7;
+      --neutral-soft:#f3f4f6;
     }
 
     *{box-sizing:border-box}
@@ -77,6 +85,7 @@
       font-size:14px;
       white-space:nowrap;
       flex:0 0 auto;
+      cursor:pointer;
     }
 
     .btn{
@@ -126,7 +135,7 @@
     }
 
     .search-wrap{
-      margin:10px 0 14px;
+      margin:10px 0 12px;
     }
 
     .search{
@@ -144,9 +153,26 @@
       box-shadow:0 0 0 3px rgba(15,118,110,.12);
     }
 
+    .viewbar{
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+      overflow:auto;
+      padding-bottom:4px;
+      -ms-overflow-style:none;
+      scrollbar-width:none;
+    }
+    .viewbar::-webkit-scrollbar{display:none}
+
     .list{
       display:flex;
       flex-direction:column;
+      gap:10px;
+    }
+
+    .list.compact-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
       gap:10px;
     }
 
@@ -181,9 +207,9 @@
       flex:0 0 auto;
     }
 
-    .dot.daytrade{ background:#f59e0b; }
-    .dot.overnight{ background:#ef4444; }
-    .dot.both{ background:linear-gradient(135deg,#f59e0b 0%,#ef4444 100%); }
+    .dot.daytrade{ background:var(--daytrade); }
+    .dot.overnight{ background:var(--overnight); }
+    .dot.both{ background:var(--both); }
 
     .symbol{
       font-size:18px;
@@ -259,12 +285,85 @@
     }
 
     .tag{
-      padding:5px 9px;
+      padding:6px 9px;
       border-radius:999px;
-      background:var(--chip);
       font-size:11px;
-      color:#374151;
       line-height:1;
+      font-weight:700;
+    }
+
+    .tag.daytrade{
+      background:var(--daytrade-soft);
+      color:var(--daytrade);
+    }
+
+    .tag.overnight{
+      background:var(--overnight-soft);
+      color:var(--overnight);
+    }
+
+    .tag.both{
+      background:var(--both-soft);
+      color:#92400e;
+    }
+
+    .tag.normal{
+      background:var(--neutral-soft);
+      color:#374151;
+      font-weight:600;
+    }
+
+    .compact-grid .card{
+      padding:12px;
+    }
+
+    .compact-grid .top{
+      gap:8px;
+    }
+
+    .compact-grid .symbol{
+      font-size:16px;
+    }
+
+    .compact-grid .name{
+      font-size:12px;
+      margin-top:3px;
+    }
+
+    .compact-grid .price-main{
+      font-size:17px;
+    }
+
+    .compact-grid .chg{
+      font-size:12px;
+    }
+
+    .compact-grid .meta-row{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:6px;
+      margin-top:10px;
+    }
+
+    .compact-grid .mini{
+      padding:7px 8px;
+    }
+
+    .compact-grid .mini-label{
+      font-size:10px;
+    }
+
+    .compact-grid .mini-value{
+      font-size:12px;
+    }
+
+    .compact-grid .tags{
+      gap:5px;
+      margin-top:8px;
+    }
+
+    .compact-grid .tag{
+      font-size:10px;
+      padding:5px 7px;
     }
 
     .empty,.loading,.error{
@@ -301,18 +400,23 @@
         <button class="chip filter-btn active" data-filter="all">全部</button>
         <button class="chip filter-btn" data-filter="daytrade">當沖</button>
         <button class="chip filter-btn" data-filter="overnight">隔日</button>
-        <button class="chip filter-btn" data-filter="strong">強勢</button>
+        <button class="chip filter-btn" data-filter="both">雙候選</button>
       </div>
     </div>
 
     <div class="panel summary-bar">
       <div class="summary-item">總數 <span class="summary-value" id="countStat">-</span></div>
       <div class="summary-item">S/A <span class="summary-value" id="levelStat">-</span></div>
-      <div class="summary-item">強勢 <span class="summary-value" id="strongStat">-</span></div>
+      <div class="summary-item">雙候選 <span class="summary-value" id="bothStat">-</span></div>
     </div>
 
     <div class="search-wrap">
-      <input id="searchInput" class="search" placeholder="搜尋代號 / 名稱 / ETF" />
+      <input id="searchInput" class="search" placeholder="搜尋代號 / 名稱 / ETF / 產業" />
+    </div>
+
+    <div class="viewbar">
+      <button class="chip active" id="singleViewBtn">清單模式</button>
+      <button class="chip" id="compactViewBtn">速覽模式</button>
     </div>
 
     <div id="list" class="list">
@@ -327,13 +431,16 @@
 
     let allRows = [];
     let currentFilter = 'all';
+    let currentView = 'single';
 
     const listEl = document.getElementById('list');
     const updatedAtEl = document.getElementById('updatedAt');
     const countStatEl = document.getElementById('countStat');
     const levelStatEl = document.getElementById('levelStat');
-    const strongStatEl = document.getElementById('strongStat');
+    const bothStatEl = document.getElementById('bothStat');
     const searchInput = document.getElementById('searchInput');
+    const singleViewBtn = document.getElementById('singleViewBtn');
+    const compactViewBtn = document.getElementById('compactViewBtn');
 
     function formatNumber(n){
       const num = Number(n);
@@ -355,14 +462,34 @@
       return (num > 0 ? '+' : '') + num.toFixed(2) + '%';
     }
 
-    function getRowTags(row){
+    function getTagObjects(row){
       const tags = [];
-      if (row.daytradeflag === 'Y') tags.push('當沖候選');
-      if (row.overnightflag === 'Y') tags.push('隔日候選');
-      if (row.tags) {
-        String(row.tags).split(',').map(v => v.trim()).filter(Boolean).forEach(v => tags.push(v));
+
+      const hasDay = row.daytradeflag === 'Y';
+      const hasOver = row.overnightflag === 'Y';
+
+      if (hasDay && hasOver) {
+        tags.push({ text:'雙候選', cls:'both' });
+      } else if (hasDay) {
+        tags.push({ text:'當沖候選', cls:'daytrade' });
+      } else if (hasOver) {
+        tags.push({ text:'隔日候選', cls:'overnight' });
       }
-      return [...new Set(tags)].slice(0, 4);
+
+      const rawTags = String(row.tags || '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      rawTags.slice(0, 3).forEach(tag => {
+        tags.push({ text: tag, cls:'normal' });
+      });
+
+      if (!tags.length && row.industry) {
+        tags.push({ text: row.industry, cls:'normal' });
+      }
+
+      return tags.slice(0, 4);
     }
 
     function getDotClass(row){
@@ -378,9 +505,7 @@
       if (currentFilter === 'all') return true;
       if (currentFilter === 'daytrade') return row.daytradeflag === 'Y';
       if (currentFilter === 'overnight') return row.overnightflag === 'Y';
-      if (currentFilter === 'strong') {
-        return ['S','A'].includes(row.daytradelevel) || ['S','A'].includes(row.overnightlevel);
-      }
+      if (currentFilter === 'both') return row.daytradeflag === 'Y' && row.overnightflag === 'Y';
       return true;
     }
 
@@ -395,16 +520,30 @@
 
     function renderStats(rows){
       countStatEl.textContent = rows.length;
-      const strong = rows.filter(r =>
-        ['S','A'].includes(r.daytradelevel) || ['S','A'].includes(r.overnightlevel)
-      ).length;
+
       const sa = rows.filter(r =>
         r.daytradelevel === 'S' || r.daytradelevel === 'A' ||
         r.overnightlevel === 'S' || r.overnightlevel === 'A'
       ).length;
 
+      const both = rows.filter(r =>
+        r.daytradeflag === 'Y' && r.overnightflag === 'Y'
+      ).length;
+
       levelStatEl.textContent = sa;
-      strongStatEl.textContent = strong;
+      bothStatEl.textContent = both;
+    }
+
+    function applyViewMode(){
+      if (currentView === 'compact') {
+        listEl.classList.add('compact-grid');
+        singleViewBtn.classList.remove('active');
+        compactViewBtn.classList.add('active');
+      } else {
+        listEl.classList.remove('compact-grid');
+        singleViewBtn.classList.add('active');
+        compactViewBtn.classList.remove('active');
+      }
     }
 
     function renderList(){
@@ -412,6 +551,7 @@
       const rows = allRows.filter(r => matchFilter(r) && matchKeyword(r, keyword));
 
       renderStats(rows);
+      applyViewMode();
 
       if (!rows.length) {
         listEl.innerHTML = '<div class="panel empty">沒有符合的股票</div>';
@@ -421,7 +561,7 @@
       listEl.innerHTML = rows.map(row => {
         const pct = Number(row.changepct);
         const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
-        const tags = getRowTags(row);
+        const tagObjects = getTagObjects(row);
         const dotClass = getDotClass(row);
 
         return `
@@ -461,7 +601,7 @@
             </div>
 
             <div class="tags">
-              ${(tags.length ? tags : [row.industry || '一般']).map(tag => `<span class="tag">${tag}</span>`).join('')}
+              ${tagObjects.map(tag => `<span class="tag ${tag.cls}">${tag.text}</span>`).join('')}
             </div>
           </div>
         `;
@@ -519,6 +659,7 @@
         updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
         renderList();
       }catch(err){
+        listEl.classList.remove('compact-grid');
         listEl.innerHTML = `<div class="panel error">讀取失敗：${err.message}</div>`;
         updatedAtEl.textContent = '資料讀取失敗';
       }
@@ -534,6 +675,16 @@
         btn.classList.add('active');
         renderList();
       });
+    });
+
+    singleViewBtn.addEventListener('click', () => {
+      currentView = 'single';
+      renderList();
+    });
+
+    compactViewBtn.addEventListener('click', () => {
+      currentView = 'compact';
+      renderList();
     });
 
     fetchData();
