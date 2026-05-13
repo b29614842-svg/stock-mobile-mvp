@@ -1,0 +1,8 @@
+{
+  "name": "stock-mobile-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "googleapis": "^137.0.1"
+  }
+}
