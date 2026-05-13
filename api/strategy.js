@@ -1,7 +1,6 @@
-import pkg from 'googleapis';
-const { google } = pkg;
+const { google } = require('googleapis');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -14,32 +13,14 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const meta = await sheets.spreadsheets.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    });
-
-    const targetSheet =
-      (meta.data.sheets || []).find(
-        s => s.properties && s.properties.title === 'strategy_view'
-      ) || null;
-
-    if (!targetSheet) {
-      return res.status(404).json({
-        ok: false,
-        error: '找不到 strategy_view 工作表',
-      });
-    }
-
-    const sheetTitle = targetSheet.properties.title;
-
     const headerRes = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `${sheetTitle}!1:1`,
+      range: 'strategy_view!1:1',
     });
 
     const dataRes = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `${sheetTitle}!3:9999`,
+      range: 'strategy_view!3:9999',
     });
 
     const headers = (headerRes.data.values && headerRes.data.values[0]) || [];
@@ -67,4 +48,4 @@ export default async function handler(req, res) {
       error: String(error.message || error),
     });
   }
-}
+};
