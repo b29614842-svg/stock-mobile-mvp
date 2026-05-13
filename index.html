@@ -441,62 +441,90 @@
       }
     }
 
-    function renderList(){
-      const keyword = searchInput.value || '';
-      const rows = allRows.filter(r => matchFilter(r) && matchKeyword(r, keyword));
+function renderList(){
+  const keyword = searchInput.value || '';
+  const rows = allRows.filter(r => matchFilter(r) && matchKeyword(r, keyword));
 
-      applyViewMode();
+  applyViewMode();
 
-      if (!rows.length) {
-        listEl.innerHTML = '<div class="empty">沒有符合的股票</div>';
-        return;
-      }
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="empty">沒有符合的股票</div>';
+    return;
+  }
 
-      listEl.innerHTML = rows.map(row => {
-        const pct = Number(row.changepct);
-        const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
-        const dots = getDots(row);
+  listEl.innerHTML = rows.map(row => {
+    const pct = Number(row.changepct);
+    const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+    const dots = getDots(row);
 
-        return `
-          <div class="card">
-            <div class="stock-head">
-              <div class="left">
-                <div class="symbol-row">
-                  ${dots}
-                  <div class="symbol">${row.symbol || '-'}</div>
-                </div>
-                <div class="name">${row.name || '-'}</div>
-              </div>
+    const buyPrice = row.buyprice > 0 ? formatPrice(row.buyprice) : '-';
+    const sellPrice = row.sellprice > 0 ? formatPrice(row.sellprice) : '-';
+    const stopPrice = row.stopprice > 0 ? formatPrice(row.stopprice) : '-';
+    const vwapText = row.vwap > 0 ? formatPrice(row.vwap) : '-';
+    const planNote = row.plannote || '';
 
-              <div class="price-box">
-                <div class="price-main">${formatPrice(row.price)}</div>
-                <div class="chg ${cls}">${formatPct(row.changepct)}</div>
-              </div>
+    return `
+      <div class="card">
+        <div class="stock-head">
+          <div class="left">
+            <div class="symbol-row">
+              ${dots}
+              <div class="symbol">${row.symbol || '-'}</div>
             </div>
-
-            <div class="info-grid">
-              <div class="info">
-                <div class="info-label">振幅</div>
-                <div class="info-value">${row.amplitudepct ?? '-'}%</div>
-              </div>
-              <div class="info">
-                <div class="info-label">區間</div>
-                <div class="info-value">${calcRange(row)}</div>
-              </div>
-              <div class="info">
-                <div class="info-label">量</div>
-                <div class="info-value">${formatVolume(row.volume)}</div>
-              </div>
-              <div class="info">
-                <div class="info-label">分數</div>
-                <div class="info-value">日 ${row.daytradescore ?? '-'} / 隔 ${row.overnightscore ?? '-'}</div>
-              </div>
-            </div>
+            <div class="name">${row.name || '-'}</div>
           </div>
-        `;
-      }).join('');
-    }
 
+          <div class="price-box">
+            <div class="price-main">${formatPrice(row.price)}</div>
+            <div class="chg ${cls}">${formatPct(row.changepct)}</div>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info">
+            <div class="info-label">振幅</div>
+            <div class="info-value">${row.amplitudepct ?? '-'}%</div>
+          </div>
+          <div class="info">
+            <div class="info-label">區間</div>
+            <div class="info-value">${calcRange(row)}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">量</div>
+            <div class="info-value">${formatVolume(row.volume)}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">分數</div>
+            <div class="info-value">日 ${row.daytradescore ?? '-'} / 隔 ${row.overnightscore ?? '-'}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">買</div>
+            <div class="info-value">${buyPrice}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">賣</div>
+            <div class="info-value">${sellPrice}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">破</div>
+            <div class="info-value">${stopPrice}</div>
+          </div>
+          <div class="info">
+            <div class="info-label">VWAP</div>
+            <div class="info-value">${vwapText}</div>
+          </div>
+        </div>
+
+        ${planNote ? `
+          <div class="info" style="margin-top:8px;">
+            <div class="info-label">提示</div>
+            <div class="info-value" style="white-space:normal;">${planNote}</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
     async function fetchData(){
       listEl.innerHTML = '<div class="loading">載入中…</div>';
       updatedAtEl.textContent = '讀取中…';
@@ -525,25 +553,39 @@
         }
 
         allRows = data.rows.map(r => ({
-          symbol: r.symbol,
-          name: r.name,
-          daytradescore: Number(r.daytrade_score || r.daytradescore || 0),
-          daytradelevel: String(r.daytrade_level || r.daytradelevel || '').replace('級', ''),
-          overnightscore: Number(r.overnight_score || r.overnightscore || 0),
-          overnightlevel: String(r.overnight_level || r.overnightlevel || '').replace('級', ''),
-          price: Number(r.price || 0),
-          changepct: Number(r.change_pct ?? r.changepct ?? 0),
-          volume: Number(r.volume || 0),
-          turnovervalue: Number(r.turnover_value || r.turnovervalue || 0),
-          amplitudepct: Number(r.amplitude_pct || r.amplitudepct || 0),
-          daytradeflag: r.daytrade_flag || r.daytradeflag || '',
-          overnightflag: r.overnight_flag || r.overnightflag || '',
-          longtermflag: r.longterm_flag || r.longtermflag || '',
-          tags: r.tags || '',
-          memo: r.memo || '',
-          industry: r.industry || '',
-          updatedat: r.updated_at || r.updatedat || ''
-        }));
+  symbol: r.symbol || '',
+  name: r.name || '',
+  daytradescore: Number(r.daytrade_score || r.daytradescore || 0),
+  daytradelevel: String(r.daytrade_level || r.daytradelevel || '').replace('級', ''),
+  overnightscore: Number(r.overnight_score || r.overnightscore || 0),
+  overnightlevel: String(r.overnight_level || r.overnightlevel || '').replace('級', ''),
+  price: Number(r.price || 0),
+  changepct: Number(r.change_pct ?? r.changepct ?? 0),
+  volume: Number(r.volume || 0),
+  turnovervalue: Number(r.turnover_value || r.turnovervalue || 0),
+  amplitudepct: Number(r.amplitude_pct || r.amplitudepct || 0),
+  daytradeflag: r.daytrade_flag || r.daytradeflag || '',
+  overnightflag: r.overnight_flag || r.overnightflag || '',
+  longtermflag: r.longterm_flag || r.longtermflag || '',
+  tags: r.tags || '',
+  memo: r.memo || '',
+  industry: r.industry || '',
+  updatedat: r.updated_at || r.updatedat || '',
+  openprice: Number(r.open_price || r.openprice || 0),
+  highprice: Number(r.high_price || r.highprice || 0),
+  lowprice: Number(r.low_price || r.lowprice || 0),
+  vwap: Number(r.vwap || 0),
+  distancetohighpct: Number(r.distance_to_high_pct || r.distancetohighpct || 0),
+  distancetolowpct: Number(r.distance_to_low_pct || r.distancetolowpct || 0),
+  plantype: r.plan_type || r.plantype || '',
+  buyzone: r.buy_zone || r.buyzone || '',
+  sellzone: r.sell_zone || r.sellzone || '',
+  stoploss: r.stop_loss || r.stoploss || '',
+  plannote: r.plan_note || r.plannote || '',
+  buyprice: Number(r.buy_price || r.buyprice || 0),
+  sellprice: Number(r.sell_price || r.sellprice || 0),
+  stopprice: Number(r.stop_price || r.stopprice || 0)
+}));
 
         updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
         renderList();
