@@ -387,15 +387,25 @@
       redirect: 'follow'
     });
 
-    const text = await res.text();
-    console.log('raw text:', text);
+const text = await res.text();
+console.log('raw text:', text);
 
-    const data = JSON.parse(text);
-    console.log('parsed data:', data);
+if (!res.ok) {
+  throw new Error(`HTTP ${res.status}`);
+}
 
-    if (!data || !data.ok || !Array.isArray(data.rows)) {
-      throw new Error('API 回傳格式錯誤');
-    }
+let data;
+try {
+  data = JSON.parse(text);
+} catch (e) {
+  throw new Error('API 沒有回傳 JSON');
+}
+
+console.log('parsed data:', data);
+
+if (!data || !data.ok || !Array.isArray(data.rows)) {
+  throw new Error('API 回傳格式錯誤');
+}
 
  allRows = data.rows.map(r => ({
   symbol: r.symbol,
