@@ -1,1 +1,448 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>stock-mobile-mvp</title>
+  <meta name="description" content="台股策略手機看盤 MVP" />
+  <style>
+    :root{
+      --bg:#f6f3ee;
+      --card:#fffdf9;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --primary:#0f766e;
+      --up:#c2410c;
+      --down:#0f766e;
+      --chip:#f3f4f6;
+      --shadow:0 10px 30px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .app{
+      max-width:760px;
+      margin:0 auto;
+      padding:16px 16px 96px;
+    }
+    .header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:rgba(246,243,238,.92);
+      backdrop-filter:blur(12px);
+      padding:12px 0;
+    }
+    h1{
+      margin:0;
+      font-size:28px;
+      line-height:1.1;
+    }
+    .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .toolbar{
+      display:flex;
+      gap:8px;
+      margin-top:14px;
+      overflow:auto;
+      padding-bottom:4px;
+    }
+    .btn,.chip{
+      border:none;
+      border-radius:999px;
+      padding:10px 14px;
+      font-size:14px;
+      white-space:nowrap;
+    }
+    .btn{
+      background:var(--primary);
+      color:#fff;
+      font-weight:600;
+    }
+    .chip{
+      background:var(--chip);
+      color:var(--text);
+    }
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin:14px 0 16px;
+    }
+    .stat{
+      padding:14px;
+    }
+    .stat-label{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .stat-value{
+      margin-top:6px;
+      font-size:20px;
+      font-weight:700;
+    }
+    .search-wrap{
+      margin:12px 0 14px;
+    }
+    .search{
+      width:100%;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      font-size:16px;
+      background:#fff;
+    }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .card{
+      padding:16px;
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .top{
+      margin-bottom:10px;
+    }
+    .symbol{
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .name{
+      margin-top:4px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .price{
+      text-align:right;
+    }
+    .price-main{
+      font-size:22px;
+      font-weight:800;
+    }
+    .chg{
+      margin-top:4px;
+      font-size:14px;
+      font-weight:700;
+    }
+    .up{color:var(--up)}
+    .down{color:var(--down)}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:10px;
+      margin-top:8px;
+    }
+    .metric{
+      background:#faf7f2;
+      border-radius:14px;
+      padding:10px 12px;
+    }
+    .metric-label{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .metric-value{
+      margin-top:4px;
+      font-size:15px;
+      font-weight:700;
+    }
+    .tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
+    }
+    .tag{
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--chip);
+      font-size:12px;
+      color:#374151;
+    }
+    .empty,.loading,.error{
+      padding:20px;
+      text-align:center;
+      color:var(--muted);
+    }
+    .footer-note{
+      margin-top:14px;
+      font-size:12px;
+      color:var(--muted);
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>台股策略清單</h1>
+      <div class="sub" id="updatedAt">讀取中…</div>
 
+      <div class="toolbar">
+        <button class="btn" id="refreshBtn">重新整理</button>
+        <button class="chip filter-btn" data-filter="all">全部</button>
+        <button class="chip filter-btn" data-filter="daytrade">當沖</button>
+        <button class="chip filter-btn" data-filter="overnight">隔日</button>
+        <button class="chip filter-btn" data-filter="strong">強勢</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="panel stat">
+        <div class="stat-label">筆數</div>
+        <div class="stat-value" id="countStat">-</div>
+      </div>
+      <div class="panel stat">
+        <div class="stat-label">S / A</div>
+        <div class="stat-value" id="levelStat">-</div>
+      </div>
+      <div class="panel stat">
+        <div class="stat-label">強勢股</div>
+        <div class="stat-value" id="strongStat">-</div>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <input id="searchInput" class="search" placeholder="搜尋代號 / 名稱" />
+    </div>
+
+    <div id="list" class="list">
+      <div class="panel loading">載入中…</div>
+    </div>
+
+    <div class="footer-note">stock-mobile-mvp</div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxJgIrVvY4pwPXCjxAF-mlbwgGnjwoD9yCO6ovUqrD60du55B3F1QiJs0U98c3vwMqRLw/exec';
+
+    let allRows = [];
+    let currentFilter = 'all';
+
+    const listEl = document.getElementById('list');
+    const updatedAtEl = document.getElementById('updatedAt');
+    const countStatEl = document.getElementById('countStat');
+    const levelStatEl = document.getElementById('levelStat');
+    const strongStatEl = document.getElementById('strongStat');
+    const searchInput = document.getElementById('searchInput');
+
+    function formatNumber(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return '-';
+      return new Intl.NumberFormat('zh-TW').format(num);
+    }
+
+    function formatMoney(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return '-';
+      if (num >= 100000000) return (num / 100000000).toFixed(2) + ' 億';
+      if (num >= 10000) return (num / 10000).toFixed(0) + ' 萬';
+      return formatNumber(num);
+    }
+
+    function formatVolume(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return '-';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return formatNumber(num);
+    }
+
+    function formatPct(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return '-';
+      return (num > 0 ? '+' : '') + num.toFixed(2) + '%';
+    }
+
+    function getRowTags(row){
+      const tags = [];
+      if (row.daytradeflag === 'Y') tags.push('當沖');
+      if (row.overnightflag === 'Y') tags.push('隔日');
+      if (['S','A'].includes(row.daytradelevel)) tags.push('日內強');
+      if (['S','A'].includes(row.overnightlevel)) tags.push('波段強');
+      if (row.tags) {
+        String(row.tags).split(',').map(v => v.trim()).filter(Boolean).forEach(v => tags.push(v));
+      }
+      return [...new Set(tags)].slice(0, 6);
+    }
+
+    function matchFilter(row){
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'daytrade') return row.daytradeflag === 'Y';
+      if (currentFilter === 'overnight') return row.overnightflag === 'Y';
+      if (currentFilter === 'strong') {
+        return ['S','A'].includes(row.daytradelevel) || ['S','A'].includes(row.overnightlevel);
+      }
+      return true;
+    }
+
+    function matchKeyword(row, keyword){
+      if (!keyword) return true;
+      const k = keyword.trim().toLowerCase();
+      return String(row.symbol || '').toLowerCase().includes(k) ||
+             String(row.name || '').toLowerCase().includes(k);
+    }
+
+    function renderStats(rows){
+      countStatEl.textContent = rows.length;
+      const strong = rows.filter(r => ['S','A'].includes(r.daytradelevel) || ['S','A'].includes(r.overnightlevel)).length;
+      const sa = rows.filter(r => r.daytradelevel === 'S' || r.daytradelevel === 'A' || r.overnightlevel === 'S' || r.overnightlevel === 'A').length;
+      levelStatEl.textContent = sa;
+      strongStatEl.textContent = strong;
+    }
+
+    function renderList(){
+      const keyword = searchInput.value || '';
+      const rows = allRows.filter(r => matchFilter(r) && matchKeyword(r, keyword));
+
+      renderStats(rows);
+
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="panel empty">沒有符合的股票</div>';
+        return;
+      }
+
+      listEl.innerHTML = rows.map(row => {
+        const pct = Number(row.changepct);
+        const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+        const tags = getRowTags(row);
+
+        return `
+          <div class="panel card">
+            <div class="row top">
+              <div>
+                <div class="symbol">${row.symbol || '-'}</div>
+                <div class="name">${row.name || ''}</div>
+              </div>
+              <div class="price">
+                <div class="price-main">${row.price ?? '-'}</div>
+                <div class="chg ${cls}">${formatPct(row.changepct)}</div>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="metric">
+                <div class="metric-label">當沖分數 / 等級</div>
+                <div class="metric-value">${row.daytradescore ?? '-'} / ${row.daytradelevel || '-'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">隔日分數 / 等級</div>
+                <div class="metric-value">${row.overnightscore ?? '-'} / ${row.overnightlevel || '-'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">成交量</div>
+                <div class="metric-value">${formatVolume(row.volume)}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">成交值</div>
+                <div class="metric-value">${formatMoney(row.turnovervalue)}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">振幅</div>
+                <div class="metric-value">${row.amplitudepct ?? '-'}%</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">產業</div>
+                <div class="metric-value">${row.industry || '-'}</div>
+              </div>
+            </div>
+
+            <div class="tags">
+              ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+   async function fetchData(){
+  listEl.innerHTML = '<div class="panel loading">載入中…</div>';
+  updatedAtEl.textContent = '讀取中…';
+
+  try{
+    const res = await fetch(API_URL, {
+      method: 'GET',
+      redirect: 'follow'
+    });
+
+    const text = await res.text();
+    console.log('raw text:', text);
+
+    const data = JSON.parse(text);
+    console.log('parsed data:', data);
+
+    if (!data || !data.ok || !Array.isArray(data.rows)) {
+      throw new Error('API 回傳格式錯誤');
+    }
+
+    allRows = data.rows.map(r => ({
+      symbol: r.symbol,
+      name: r.name,
+      daytradescore: r.daytrade_score,
+      daytradelevel: String(r.daytrade_level || '').replace('級', ''),
+      overnightscore: r.overnight_score,
+      overnightlevel: String(r.overnight_level || '').replace('級', ''),
+      price: r.price,
+      changepct: r.change_pct,
+      volume: r.volume,
+      turnovervalue: r.turnover_value,
+      amplitudepct: r.amplitude_pct,
+      daytradeflag: r.daytrade_flag,
+      overnightflag: r.overnight_flag,
+      longtermflag: r.longterm_flag,
+      tags: r.tags,
+      memo: r.memo,
+      industry: r.industry,
+      updatedat: r.updated_at
+    }));
+
+    updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
+    renderList();
+  }catch(err){
+    console.error('fetchData error:', err);
+    listEl.innerHTML = `<div class="panel error">讀取失敗：${err.message}</div>`;
+    updatedAtEl.textContent = '資料讀取失敗';
+  }
+}
+
+    document.getElementById('refreshBtn').addEventListener('click', fetchData);
+    searchInput.addEventListener('input', renderList);
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.style.background = '#f3f4f6';
+          b.style.color = '#1f2937';
+        });
+        btn.style.background = '#0f766e';
+        btn.style.color = '#fff';
+        renderList();
+      });
+    });
+
+    fetchData();
+  </script>
+</body>
+</html>
