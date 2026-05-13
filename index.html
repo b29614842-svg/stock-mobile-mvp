@@ -397,25 +397,25 @@
       throw new Error('API 回傳格式錯誤');
     }
 
-   allRows = data.rows.map(r => ({
+ allRows = data.rows.map(r => ({
   symbol: r.symbol,
   name: r.name,
-  daytradescore: r.daytradescore,
-  daytradelevel: String(r.daytradelevel || '').replace('級', ''),
-  overnightscore: r.overnightscore,
-  overnightlevel: String(r.overnightlevel || '').replace('級', ''),
+  daytradescore: r.daytradescore ?? r.daytrade_score,
+  daytradelevel: String(r.daytradelevel ?? r.daytrade_level ?? '').replace('級', ''),
+  overnightscore: r.overnightscore ?? r.overnight_score,
+  overnightlevel: String(r.overnightlevel ?? r.overnight_level ?? '').replace('級', ''),
   price: r.price,
-  changepct: r.changepct,
+  changepct: r.changepct ?? r.change_pct,
   volume: r.volume,
-  turnovervalue: r.turnovervalue,
-  amplitudepct: r.amplitudepct,
-  daytradeflag: r.daytradeflag,
-  overnightflag: r.overnightflag,
-  longtermflag: r.longtermflag,
+  turnovervalue: r.turnovervalue ?? r.turnover_value,
+  amplitudepct: r.amplitudepct ?? r.amplitude_pct,
+  daytradeflag: r.daytradeflag ?? r.daytrade_flag,
+  overnightflag: r.overnightflag ?? r.overnight_flag,
+  longtermflag: r.longtermflag ?? r.longterm_flag,
   tags: r.tags,
   memo: r.memo,
   industry: r.industry,
-  updatedat: r.updatedat
+  updatedat: r.updatedat ?? r.updated_at
 }));
 
     updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
