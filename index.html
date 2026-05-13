@@ -22,8 +22,8 @@
       --shadow:0 10px 24px rgba(0,0,0,.05);
       --radius:18px;
 
-      --day:#dc2626;   /* 當沖：紅 */
-      --swing:#2563eb; /* 隔日：藍 */
+      --day:#dc2626;
+      --swing:#2563eb;
       --price-bg:#fffaf3;
       --price-line:#f3d9b1;
     }
@@ -49,6 +49,10 @@
       background:rgba(246,243,238,.94);
       backdrop-filter:blur(12px);
       padding:10px 0 12px;
+    }
+
+    .title-wrap{
+      display:block;
     }
 
     h1{
@@ -154,12 +158,11 @@
       flex:1;
     }
 
-    .dots{
+    .symbol-row{
       display:flex;
       align-items:center;
-      gap:5px;
-      margin-bottom:6px;
-      min-height:10px;
+      gap:7px;
+      min-width:0;
     }
 
     .dot{
@@ -167,17 +170,11 @@
       height:9px;
       border-radius:50%;
       display:inline-block;
+      flex:0 0 auto;
     }
 
     .dot.day{ background:var(--day); }
     .dot.swing{ background:var(--swing); }
-
-    .symbol-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      min-width:0;
-    }
 
     .symbol{
       font-size:18px;
@@ -292,6 +289,16 @@
       font-size:12px;
     }
 
+    .compact-mode .title-wrap,
+    .compact-mode .search-wrap{
+      display:none;
+    }
+
+    .compact-mode .header{
+      padding-top:6px;
+      padding-bottom:8px;
+    }
+
     .empty,.loading,.error{
       padding:18px;
       text-align:center;
@@ -314,10 +321,12 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="appRoot">
     <div class="header">
-      <h1>台股策略清單</h1>
-      <div class="sub" id="updatedAt">讀取中…</div>
+      <div class="title-wrap">
+        <h1>台股策略清單</h1>
+        <div class="sub" id="updatedAt">讀取中…</div>
+      </div>
 
       <div class="toolbar">
         <button class="btn" id="refreshBtn">更新列表</button>
@@ -351,6 +360,7 @@
     let currentFilter = 'all';
     let currentView = 'single';
 
+    const appRoot = document.getElementById('appRoot');
     const listEl = document.getElementById('list');
     const updatedAtEl = document.getElementById('updatedAt');
     const searchInput = document.getElementById('searchInput');
@@ -377,17 +387,27 @@
       return (num > 0 ? '+' : '') + num.toFixed(2) + '%';
     }
 
-    function formatOpen(n){
+    function formatPrice(n){
       const num = Number(n);
       if (!Number.isFinite(num)) return '-';
       return num % 1 === 0 ? String(num) : num.toFixed(1);
     }
 
+    function calcRange(row){
+      const price = Number(row.price);
+      const amp = Number(row.amplitudepct);
+      if (!Number.isFinite(price) || !Number.isFinite(amp) || price <= 0) return '-';
+      const halfBand = amp / 200;
+      const low = price * (1 - halfBand);
+      const high = price * (1 + halfBand);
+      return `${formatPrice(low)} - ${formatPrice(high)}`;
+    }
+
     function getDots(row){
-      const dots = [];
-      if (row.daytradeflag === 'Y') dots.push('<span class="dot day"></span>');
-      if (row.overnightflag === 'Y') dots.push('<span class="dot swing"></span>');
-      return dots.join('');
+      const html = [];
+      if (row.daytradeflag === 'Y') html.push('<span class="dot day"></span>');
+      if (row.overnightflag === 'Y') html.push('<span class="dot swing"></span>');
+      return html.join('');
     }
 
     function matchFilter(row){
@@ -410,10 +430,12 @@
     function applyViewMode(){
       if (currentView === 'compact') {
         listEl.classList.add('compact-grid');
+        appRoot.classList.add('compact-mode');
         singleViewBtn.classList.remove('active');
         compactViewBtn.classList.add('active');
       } else {
         listEl.classList.remove('compact-grid');
+        appRoot.classList.remove('compact-mode');
         singleViewBtn.classList.add('active');
         compactViewBtn.classList.remove('active');
       }
@@ -439,15 +461,15 @@
           <div class="card">
             <div class="stock-head">
               <div class="left">
-                <div class="dots">${dots}</div>
                 <div class="symbol-row">
+                  ${dots}
                   <div class="symbol">${row.symbol || '-'}</div>
                 </div>
                 <div class="name">${row.name || '-'}</div>
               </div>
 
               <div class="price-box">
-                <div class="price-main">${row.price ?? '-'}</div>
+                <div class="price-main">${formatPrice(row.price)}</div>
                 <div class="chg ${cls}">${formatPct(row.changepct)}</div>
               </div>
             </div>
@@ -458,8 +480,8 @@
                 <div class="info-value">${row.amplitudepct ?? '-'}%</div>
               </div>
               <div class="info">
-                <div class="info-label">開盤</div>
-                <div class="info-value">${formatOpen(row.openprice)}</div>
+                <div class="info-label">區間</div>
+                <div class="info-value">${calcRange(row)}</div>
               </div>
               <div class="info">
                 <div class="info-label">量</div>
@@ -510,7 +532,6 @@
           overnightscore: Number(r.overnight_score || r.overnightscore || 0),
           overnightlevel: String(r.overnight_level || r.overnightlevel || '').replace('級', ''),
           price: Number(r.price || 0),
-          openprice: Number(r.open_price ?? r.openprice ?? 0),
           changepct: Number(r.change_pct ?? r.changepct ?? 0),
           volume: Number(r.volume || 0),
           turnovervalue: Number(r.turnover_value || r.turnovervalue || 0),
