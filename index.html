@@ -410,22 +410,22 @@ if (!data || !data.ok || !Array.isArray(data.rows)) {
  allRows = data.rows.map(r => ({
   symbol: r.symbol,
   name: r.name,
-  daytradescore: r.daytradescore ?? r.daytrade_score,
-  daytradelevel: String(r.daytradelevel ?? r.daytrade_level ?? '').replace('級', ''),
-  overnightscore: r.overnightscore ?? r.overnight_score,
-  overnightlevel: String(r.overnightlevel ?? r.overnight_level ?? '').replace('級', ''),
-  price: r.price,
-  changepct: r.changepct ?? r.change_pct,
-  volume: r.volume,
-  turnovervalue: r.turnovervalue ?? r.turnover_value,
-  amplitudepct: r.amplitudepct ?? r.amplitude_pct,
-  daytradeflag: r.daytradeflag ?? r.daytrade_flag,
-  overnightflag: r.overnightflag ?? r.overnight_flag,
-  longtermflag: r.longtermflag ?? r.longterm_flag,
-  tags: r.tags,
-  memo: r.memo,
-  industry: r.industry,
-  updatedat: r.updatedat ?? r.updated_at
+  daytradescore: Number(r.daytrade_score || r.daytradescore || 0),
+  daytradelevel: String(r.daytrade_level || r.daytradelevel || '').replace('級', ''),
+  overnightscore: Number(r.overnight_score || r.overnightscore || 0),
+  overnightlevel: String(r.overnight_level || r.overnightlevel || '').replace('級', ''),
+  price: Number(r.price || 0),
+  changepct: Number(r.change_pct ?? r.changepct ?? 0),
+  volume: Number(r.volume || 0),
+  turnovervalue: Number(r.turnover_value || r.turnovervalue || 0),
+  amplitudepct: Number(r.amplitude_pct || r.amplitudepct || 0),
+  daytradeflag: r.daytrade_flag || r.daytradeflag || '',
+  overnightflag: r.overnight_flag || r.overnightflag || '',
+  longtermflag: r.longterm_flag || r.longtermflag || '',
+  tags: r.tags || '',
+  memo: r.memo || '',
+  industry: r.industry || '',
+  updatedat: r.updated_at || r.updatedat || ''
 }));
 
     updatedAtEl.textContent = `更新時間：${data.updatedAt || '未知'} ・ 共 ${data.count || allRows.length} 筆`;
