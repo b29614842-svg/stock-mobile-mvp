@@ -1,4 +1,5 @@
-import { google } from 'googleapis';
+import pkg from 'googleapis';
+const { google } = pkg;
 
 export default async function handler(req, res) {
   try {
